@@ -1,40 +1,17 @@
-# PushKit - Android 通知与推送封装库
+# PushKit - iOS (Swift) 通知与推送封装库
 
-`PushKit` 是一套轻量、易用且易扩展的 Android 通知与推送封装库，采用纯 Kotlin 开发。它为 Android 应用提供了简洁的 **Kotlin DSL** 通知构建器、**Android 8.0+ 通知渠道管理**、**Android 13+ 动态通知权限辅助** 以及 **多厂商推送（FCM / 华为 / 小米等）统一抽象接口**。
+`PushKit` (iOS) 是一套轻量、现代、优雅的 iOS 通知与推送封装库，全面基于 Swift 5.9+ 并适配 iOS 14.0+ 与 macOS 11.0+。通过极简的 **Swift DSL**、对齐 Android `NotificationChannel` 哲学的 **交互式通知分类 (`NotificationCategoryManager`)**、**权限异步辅助 (`NotificationPermissionHelper`)**、**前台 Banner / 点击代理分发 (`PushKitNotificationCenterDelegate`)** 以及 **多推送通道抽象 (`PushProvider` / `APNsPushProvider`)**，大幅降低 iOS 通知开发门槛。
 
 ---
 
 ## 🌟 核心特性
 
-- 🚀 **Kotlin DSL 封装**：通过 `context.notifyPush { ... }` 极简语法创建和发送通知。
-- 📢 **通知渠道管理 (`NotificationChannelManager`)**：一键创建、更新、删除通知渠道及渠道组，灵活配置优先级、声音、震动、灯光及锁屏可见性。
-- 🛡️ **Android 13+ 权限适配 (`NotificationPermissionHelper`)**：轻松检测 `POST_NOTIFICATIONS` 运行时权限与全局通知开关，提供跳转系统设置引导。
-- 🔒 **Android 12+ 安全适配**：内部自动处理 `PendingIntent` 的 `FLAG_IMMUTABLE` / `FLAG_MUTABLE` 标志位。
-- 🎨 **丰富样式支持**：
-  - 普通通知 (`Normal`)
-  - 长文本样式 (`BigText`)
-  - 大图样式 (`BigPicture`)
-  - 列表/收件箱样式 (`Inbox`)
-  - 确定/不确定进度条通知 (`Progress`)
-- 🔌 **多厂商推送抽象 (`PushProvider`)**：定义统一接入接口，方便无缝扩展 FCM、华为、小米、OPPO、vivo、荣耀等厂商 Push SDK。
-- 📱 **完整 Compose 示例**：包含基于 Jetpack Compose 打造的示例应用 (`:sample`)，便于交互测试。
-
----
-
-## 🛠️ 项目结构
-
-```
-PushKit/
-├── pushkit/                    # PushKit 核心封装库模块
-│   └── src/main/java/com/kit/push/
-│       ├── PushKitManager.kt             # 核心单例门面类
-│       ├── channel/                      # 通知渠道与渠道组配置及管理者
-│       ├── permission/                   # 通知权限与系统设置辅助
-│       ├── builder/                      # Kotlin DSL、NotificationBuilder及样式
-│       └── provider/                     # 厂商推送 SDK 统一抽象接口
-├── sample/                     # Jetpack Compose 演示应用模块
-└── build.gradle.kts
-```
+- 🚀 **Swift DSL 链式构建**：通过 `PushKitManager.shared.notify { ... }` 极简闭包快速装配富文本、声音、附件与触发器并发送通知。
+- 📢 **交互式通知分类 (`NotificationCategoryManager`)**：快捷注册 `NotificationCategoryConfig` 与动作按钮，对齐 Android 8.0+ 渠道与分类规范。
+- 🛡️ **异步权限管理 (`NotificationPermissionHelper`)**：全面基于 Swift Concurrency (`async/await`) 查询与请求通知权限，提供系统设置直跳方法。
+- 🔔 **统一 Delegate 托管 (`PushKitNotificationCenterDelegate`)**：开箱即用支持前台通知横幅展示（iOS 14+ `.banner, .list, .sound, .badge`）与点击跳转回调。
+- 🔌 **推送通道抽象 (`PushProvider`)**：原生内置 `APNsPushProvider`，轻松扩展 FCM、极光等第三方推送 SDK。
+- 📦 **Swift Package Manager (SPM) 原生支持**：极简集成，支持语义化版本发布。
 
 ---
 
@@ -42,249 +19,230 @@ PushKit/
 
 ```mermaid
 flowchart TB
-    UserApp["应用主程序 (App / MainActivity)"]
+    App["应用业务层 (AppDelegate / SwiftUI App)"]
     
-    subgraph PushKit ["PushKit 核心封装库 (:pushkit)"]
-        Facade["PushKitManager<br/>(单例门面类)"]
+    subgraph PushKit ["PushKit iOS 核心库 (SPM)"]
+        Facade["PushKitManager.shared<br/>(单例门面类)"]
         
-        subgraph ChannelModule ["渠道管理模块 (channel)"]
-            ChannelMgr["NotificationChannelManager"]
-            ChannelConfig["NotificationChannelConfig<br/>NotificationChannelGroupConfig"]
+        subgraph CategoryModule ["分类与动作 (Category)"]
+            CategoryMgr["NotificationCategoryManager"]
+            CategoryConfig["NotificationCategoryConfig<br/>PushNotificationActionConfig"]
         end
         
-        subgraph PermissionModule ["权限与设置模块 (permission)"]
-            PermHelper["NotificationPermissionHelper<br/>(API 33+ POST_NOTIFICATIONS)"]
+        subgraph PermissionModule ["权限辅助 (Permission)"]
+            PermHelper["NotificationPermissionHelper<br/>(async/await / Status)"]
         end
         
-        subgraph BuilderModule ["通知 DSL & 构建器 (builder)"]
-            DSL["NotificationDsl<br/>(notifyPush / buildNotification)"]
+        subgraph BuilderModule ["通知 DSL & 构建器 (Builder)"]
+            DSL["NotificationDSL<br/>(notify 闭包扩展)"]
             Builder["PushNotificationBuilder"]
-            Style["NotificationStyle<br/>(Normal / BigText / BigPicture / Inbox / Progress)"]
-            Action["NotificationAction"]
+            Trigger["NotificationTriggerType<br/>(immediate / timeInterval / calendar)"]
+            Attachment["NotificationAttachmentConfig"]
         end
         
-        subgraph ProviderModule ["多厂商推送接入层 (provider)"]
-            PushProviderInterface["<<Interface>><br/>PushProvider"]
-            PushMessage["PushMessage<br/>PushTokenListener / PushMessageListener"]
-            
-            subgraph FCMImpl ["FCM 推送实现 (provider/fcm)"]
-                FcmProvider["FcmPushProvider"]
-                FcmService["PushKitFirebaseMessagingService"]
-            end
+        subgraph DelegateModule ["系统中心代理 (Delegate)"]
+            Delegate["PushKitNotificationCenterDelegate<br/>(willPresent / didReceive)"]
+        end
+        
+        subgraph ProviderModule ["多厂商推送抽象 (Provider)"]
+            PushProviderInterface["<<Protocol>><br/>PushProvider"]
+            PushMessage["PushMessage<br/>(统一解析 APNs / 厂商负载)"]
+            APNs["APNsPushProvider<br/>(handleDeviceToken / handleRemoteNotification)"]
         end
     end
     
-    SysNoti["Android 系统通知栏<br/>(NotificationManagerCompat)"]
-    FCMServer["Firebase Cloud Messaging<br/>(FCM 后台服务)"]
+    UNCenter["iOS 系统通知中心<br/>(UNUserNotificationCenter)"]
+    APNsServer["Apple Push Notification service<br/>(APNs 云端)"]
 
-    %% 交互关系
-    UserApp -->|1. 调用 DSL / 门面入口| Facade
-    UserApp -->|2. 发送/构建通知| DSL
+    %% 交互链路
+    App -->|1. 初始化与配置| Facade
+    App -->|2. 构建发送本地通知| DSL
     
-    Facade --> ChannelMgr
+    Facade --> CategoryMgr
     Facade --> PermHelper
+    Facade --> Delegate
     Facade --> PushProviderInterface
     
     DSL --> Builder
-    Builder --> Style
-    Builder --> Action
-    Builder -->|3. 发送给系统通知栏| SysNoti
+    Builder --> Trigger
+    Builder --> Attachment
+    Builder -->|3. 投递通知请求| UNCenter
     
-    ChannelMgr --> ChannelConfig
+    CategoryMgr --> CategoryConfig
+    CategoryConfig -->|注册分类与按钮| UNCenter
     
-    FcmProvider -.->|实现| PushProviderInterface
-    FcmService --> FcmProvider
-    FcmService --> PushMessage
-    FCMServer -->|4. 推送消息 / Token 回调| FcmService
+    APNs -.->|实现| PushProviderInterface
+    APNsServer -->|4. 推送下发| APNs
+    APNs --> PushMessage
 ```
 
 ---
 
-## 快速上手
+## 🛠️ 项目结构
 
-### 1. 依赖配置 (JitPack)
+```
+PushKit (iOS Branch)
+├── Package.swift                             # SPM 依赖与模块定义
+├── Sources/PushKit/
+│   ├── PushKitManager.swift                  # 核心门面单例类
+│   ├── Permission/
+│   │   └── NotificationPermissionHelper.swift # async/await 权限请求与设置跳转
+│   ├── Category/
+│   │   └── NotificationCategoryConfig.swift   # 通知分类与交互按钮管理器
+│   ├── Builder/
+│   │   ├── PushNotificationBuilder.swift     # 链式构建器与触发器封装
+│   │   └── NotificationDSL.swift             # 闭包 DSL 快捷语法
+│   ├── Delegate/
+│   │   └── PushKitNotificationCenterDelegate.swift # 前台展示与交互回调 Delegate
+│   └── Provider/
+│       ├── PushMessage.swift                 # 统一推送消息数据模型
+│       ├── PushProvider.swift                # 厂商推送通道协议
+│       └── APNsPushProvider.swift            # APNs 原生推送通道实现
+└── Tests/PushKitTests/
+    └── PushKitTests.swift                    # 单元测试套件
+```
 
-在根目录 `settings.gradle.kts` 的 `dependencyResolutionManagement` 中添加 JitPack 仓库：
+---
 
-```kotlin
-dependencyResolutionManagement {
-    repositories {
-        google()
-        mavenCentral()
-        maven { url = uri("https://jitpack.io") }
+## 🚀 快速上手
+
+### 1. 依赖配置 (SPM)
+
+在 Xcode 项目中选择 **File > Add Package Dependencies...**，输入仓库地址并选定 `ios` 分支或对应发布 Tag：
+
+```swift
+dependencies: [
+    .package(url: "https://github.com/e-hai/PushKit.git", branch: "ios")
+]
+```
+
+---
+
+### 2. 初始化与前台通知设置
+
+在 `AppDelegate` 或 `@main App` 的 `init()` 中进行设置：
+
+```swift
+import UIKit
+import PushKit
+
+@main
+class AppDelegate: UIResponder, UIApplicationDelegate {
+    func application(
+        _ application: UIApplication,
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+    ) -> Bool {
+        // 绑定系统通知中心 Delegate
+        PushKitManager.shared.setup()
+        
+        // 自定义前台通知横幅展示（可选）
+        PushKitManager.shared.delegate.willPresentNotificationHandler = { notification in
+            return [.banner, .sound, .badge]
+        }
+        
+        // 监听用户点击通知行为（可选）
+        PushKitManager.shared.delegate.didReceiveNotificationResponseHandler = { response in
+            let userInfo = response.notification.request.content.userInfo
+            print("用户点击了通知：\(userInfo)")
+        }
+        
+        return true
     }
 }
 ```
 
-在主模块 `build.gradle.kts` 中引入依赖（替换 `Tag` 为发布版本，例如 `1.0.0`）：
+---
 
-```kotlin
-dependencies {
-    implementation("com.github.username:PushKit:Tag")
+### 3. 请求通知权限
+
+```swift
+// 异步请求通知权限
+Task {
+    do {
+        let granted = try await PushKitManager.shared.requestPermission(options: [.alert, .badge, .sound])
+        print("通知授权状态：\(granted)")
+    } catch {
+        print("权限请求失败：\(error)")
+    }
 }
-```
 
-> **本地源码依赖说明**：若作为本地子模块引入，使用 `implementation(project(":pushkit"))` 即可。
-
----
-
-### 2. 初始化与通知渠道配置
-
-建议在 `Application` 或 `MainActivity` 中初始化 notification channels：
-
-```kotlin
-import com.kit.push.PushKitManager
-import com.kit.push.channel.NotificationChannelConfig
-
-val pushKit = PushKitManager.getInstance(context)
-
-// 创建通用通知渠道
-pushKit.createChannel(
-    NotificationChannelConfig(
-        id = "channel_general",
-        name = "普通消息通知",
-        description = "用于接收日常应用更新与消息提醒"
-    )
-)
+// 跳转系统设置
+PushKitManager.shared.openNotificationSettings()
 ```
 
 ---
 
-### 3. 发送通知 (使用 Kotlin DSL)
+### 4. 发送通知 (使用 Swift DSL)
 
 #### 发送普通通知
-```kotlin
-import com.kit.push.builder.notifyPush
-import com.kit.push.builder.createPendingActivityIntent
-
-val intent = Intent(context, MainActivity::class.java)
-val pendingIntent = context.createPendingActivityIntent(requestCode = 101, intent = intent)
-
-context.notifyPush(
-    id = 1001,
-    channelId = "channel_general"
-) {
-    title = "新消息提醒"
-    content = "您收到一条新的系统提醒消息"
-    contentIntent = pendingIntent
-    autoCancel = true
+```swift
+Task {
+    try? await PushKitManager.shared.notify(id: "msg_1001") { builder in
+        builder.title = "新消息提醒"
+        builder.subtitle = "系统公告"
+        builder.body = "您收到一条来自 PushKit (iOS) 的通知消息。"
+        builder.badge = 1
+        builder.userInfo = ["type": "chat", "chat_id": 12345]
+    }
 }
 ```
 
-#### 发送大文本通知
-```kotlin
-context.notifyPush(
-    id = 1002,
-    channelId = "channel_general"
-) {
-    title = "长文本通知"
-    content = "展开查看详细内容..."
-    style = NotificationStyle.BigText(
-        bigText = "这是非常详细的长文本内容，展开通知栏即可完整查看。",
-        summaryText = "系统通知"
-    )
+#### 发送倒计时通知 (带触发器)
+```swift
+Task {
+    try? await PushKitManager.shared.notify(id: "reminder_1002") { builder in
+        builder.title = "倒计时提醒"
+        builder.body = "5 秒钟前设置的提醒已到达！"
+        builder.triggerType = .timeInterval(seconds: 5, repeats: false)
+    }
 }
 ```
 
-#### 发送大图通知
-```kotlin
-context.notifyPush(
-    id = 1003,
-    channelId = "channel_general"
-) {
-    title = "图片消息"
-    content = "点击或下拉展开图片"
-    style = NotificationStyle.BigPicture(
-        picture = bitmap,
-        summaryText = "大图预览"
-    )
-}
-```
-
-#### 发送进度条通知
-```kotlin
-context.notifyPush(
-    id = 1004,
-    channelId = "channel_general"
-) {
-    title = "文件下载中"
-    content = "已下载 65%"
-    style = NotificationStyle.Progress(
-        max = 100,
-        progress = 65,
-        indeterminate = false
-    )
-    ongoing = true // 设置为常驻通知
-}
-```
-
----
-
-### 4. 权限与系统设置管理
-
-```kotlin
-// 检查是否有发送通知权限（兼容 Android 13+）
-val hasPermission = PushKitManager.getInstance(context).hasNotificationPermission()
-
-// 一键跳转到应用的系统通知设置页
-PushKitManager.getInstance(context).openNotificationSettings()
-
-// 清除所有通知
-PushKitManager.getInstance(context).cancelAll()
-```
-
----
-
-### 5. 注册 FCM 推送通道
-
-```kotlin
-import com.kit.push.provider.fcm.FcmPushProvider
-
-// 1. 创建 FCM 通道并绑定 Token 与 消息回调
-val fcmProvider = FcmPushProvider()
-
-fcmProvider.setMessageListener { message, providerName ->
-    Log.d("PushKit", "收到来自 $providerName 的消息: ${message.title} - ${message.content}")
-}
-
-// 2. 注册通道并获取 Token
-PushKitManager.getInstance(context).registerProvider(fcmProvider)
-```
-
----
-
-### 6. 💡 厂商推送通知展示机制说明
-
-厂商推送（FCM / 华为 / 小米 / OPPO / vivo 等）消息能否自动弹出通知，取决于消息类型：
-
-1. **通知消息 (Notification Message / 系统展示消息)**：
-   - 消息体中带有系统标准的 `title` 和 `body` 字段。
-   - **由厂商系统直接弹出通知**，即使 App 进程被杀死也能弹出。点击后自动拉起 App。
-
-2. **透传消息 (Data Message / 静默消息)**：
-   - 消息体中仅有 `data` 自定义数据负载，**系统不会自动弹通知**。
-   - 消息会触发 `onMessageReceived` 回调，由开发者手动调用 `context.notifyPush { ... }` 动态创建并弹出通知：
-
-```kotlin
-fcmProvider.setMessageListener { message, providerName ->
-    // 当收到透传数据消息时，使用 PushKit 动态弹出系统通知
-    context.notifyPush(id = 1005, channelId = "channel_general") {
-        title = message.title ?: "透传通知"
-        content = message.content ?: "收到一条后台数据推送到达"
-        autoCancel = true
+#### 发送富媒体图片通知
+```swift
+if let imageURL = Bundle.main.url(forResource: "banner", withExtension: "jpg") {
+    Task {
+        try? await PushKitManager.shared.notify(id: "image_1003") { builder in
+            builder.title = "图文并茂的通知"
+            builder.body = "长按或下拉通知栏展开查看图片。"
+            builder.addAttachment(fileURL: imageURL)
+        }
     }
 }
 ```
 
 ---
 
-## ⚙️ 编译与验证
+### 5. 注册 APNs 与接收远程推送
 
-使用系统预置的 Gradle Wrapper 运行编译：
+```swift
+// 1. 在 AppDelegate 中接收 DeviceToken 并转发给 PushKit
+func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    PushKitManager.shared.apnsProvider.handleDeviceToken(deviceToken)
+}
+
+// 2. 接收 APNs 远程推送消息
+PushKitManager.shared.apnsProvider.setMessageListener { message, providerName in
+    print("收到来自 [\(providerName)] 的远程推送：title=\(message.title ?? ""), body=\(message.body ?? "")")
+    print("自定义负载：\(message.payload)")
+}
+
+// 3. 注册 APNs
+PushKitManager.shared.apnsProvider.register { token, provider in
+    print("成功获取 \(provider) DeviceToken: \(token)")
+}
+```
+
+---
+
+## ⚙️ 编译与测试
 
 ```bash
-# 编译 PushKit 库模块与 Sample 应用
-./gradlew :pushkit:assembleRelease :sample:assembleDebug
+# 编译库模块
+swift build
+
+# 运行单元测试
+swift test
 ```
 
 ---
