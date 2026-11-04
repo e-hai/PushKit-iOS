@@ -1,5 +1,8 @@
 import Foundation
 import UserNotifications
+#if canImport(UIKit)
+import UIKit
+#endif
 
 /// 通知权限状态封装枚举。
 public enum NotificationPermissionStatus: Sendable {

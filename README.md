@@ -1,17 +1,47 @@
-# PushKit - iOS (Swift) 通知与推送封装库
+# PushKit - iOS (Swift) 通知与 APNs 远程推送封装库
 
-`PushKit` (iOS) 是一套轻量、现代、优雅的 iOS 通知与推送封装库，全面基于 Swift 5.9+ 并适配 iOS 14.0+ 与 macOS 11.0+。通过极简的 **Swift DSL**、对齐 Android `NotificationChannel` 哲学的 **交互式通知分类 (`NotificationCategoryManager`)**、**权限异步辅助 (`NotificationPermissionHelper`)**、**前台 Banner / 点击代理分发 (`PushKitNotificationCenterDelegate`)** 以及 **多推送通道抽象 (`PushProvider` / `APNsPushProvider`)**，大幅降低 iOS 通知开发门槛。
+`PushKit` (iOS) 是一套轻量、现代、优雅的 iOS 通知与推送封装库，全面基于 Swift 5.9+ 并适配 iOS 15.0+ 与 macOS 11.0+。通过极简的 **Swift DSL**、对齐 Android `NotificationChannel` 哲学的 **交互式通知分类 (`NotificationCategoryManager`)**、**权限异步辅助 (`NotificationPermissionHelper`)**、**前台 Banner / 点击代理分发 (`PushKitNotificationCenterDelegate`)** 以及 **官方 APNs 远程推送通道 (`APNsPushProvider`)**，大幅降低 iOS 通知开发门槛。
 
 ---
 
 ## 🌟 核心特性
 
-- 🚀 **Swift DSL 链式构建**：通过 `PushKitManager.shared.notify { ... }` 极简闭包快速装配富文本、声音、附件与触发器并发送通知。
-- 📢 **交互式通知分类 (`NotificationCategoryManager`)**：快捷注册 `NotificationCategoryConfig` 与动作按钮，对齐 Android 8.0+ 渠道与分类规范。
-- 🛡️ **异步权限管理 (`NotificationPermissionHelper`)**：全面基于 Swift Concurrency (`async/await`) 查询与请求通知权限，提供系统设置直跳方法。
-- 🔔 **统一 Delegate 托管 (`PushKitNotificationCenterDelegate`)**：开箱即用支持前台通知横幅展示（iOS 14+ `.banner, .list, .sound, .badge`）与点击跳转回调。
-- 🔌 **推送通道抽象 (`PushProvider`)**：原生内置 `APNsPushProvider`，轻松扩展 FCM、极光等第三方推送 SDK。
-- 📦 **Swift Package Manager (SPM) 原生支持**：极简集成，支持语义化版本发布。
+- 🚀 **Swift 声明式 DSL**：通过 `PushKitManager.shared.notify { ... }` 极简闭包快速装配富文本、声音、自定义数据与触发器。
+- 📢 **交互式通知分类治理 (`NotificationCategoryManager`)**：快捷注册 `NotificationCategoryConfig` 与动作按钮，长按即可弹出操作菜单（如 [回复]、[稍后提醒]）。
+- 🛡️ **异步权限管理 (`NotificationPermissionHelper`)**：全面基于 Swift Concurrency (`async/await`) 检查与请求系统通知权限，支持直跳系统应用设置。
+- 🔔 **前台横幅与点击托管 (`PushKitNotificationCenterDelegate`)**：开箱即用支持前台直接弹出横幅展示通知（`.banner, .sound, .badge, .list`）与点击跳转回调。
+- 🔌 **官方 APNs 原生集成 (`APNsPushProvider`)**：自动注册 Apple 远程通知、转换 DeviceToken Hex 字符串，并将原始 APNs 字典统一解析为 `PushMessage`。
+- 📦 **Swift Package Manager (SPM) 原生集成**：无需第三方依赖管理器，Xcode 原生一键接入。
+- 📱 **配套精美 SwiftUI Demo App**：附带完整的 `Example/PushKitDemo.xcodeproj` 演示工程，可直接运行在模拟器或真机体验。
+
+---
+
+## 🛠️ 项目结构
+
+```
+PushKit-iOS/
+├── Package.swift                             # SPM 依赖与模块定义
+├── Sources/PushKit/                          # 核心库源码
+│   ├── PushKitManager.swift                  # 统一门面单例类
+│   ├── Permission/
+│   │   └── NotificationPermissionHelper.swift # async/await 权限请求与设置直跳
+│   ├── Category/
+│   │   └── NotificationCategoryConfig.swift   # 交互式通知分类与快捷动作按钮
+│   ├── Builder/
+│   │   ├── PushNotificationBuilder.swift     # 链式构建器与三种触发器封装
+│   │   └── NotificationDSL.swift             # 声明式 DSL 语法糖扩展
+│   ├── Delegate/
+│   │   └── PushKitNotificationCenterDelegate.swift # 前台展示与交互点击代理
+│   └── Provider/
+│       ├── PushMessage.swift                 # 统一跨端推送消息模型
+│       ├── PushProvider.swift                # 厂商推送协议
+│       └── APNsPushProvider.swift            # 官方 APNs 原生远程推送通道
+├── Tests/PushKitTests/
+│   └── PushKitTests.swift                    # 单元测试套件
+└── Example/                                  # 配套 SwiftUI 交互式演示工程
+    ├── PushKitDemo.xcodeproj                 # Xcode 项目工程文件
+    └── PushKitDemo/                          # Demo 界面与启动入口
+```
 
 ---
 
@@ -44,7 +74,7 @@ flowchart TB
             Delegate["PushKitNotificationCenterDelegate<br/>(willPresent / didReceive)"]
         end
         
-        subgraph ProviderModule ["多厂商推送抽象 (Provider)"]
+        subgraph ProviderModule ["推送通道适配层 (Provider)"]
             PushProviderInterface["<<Protocol>><br/>PushProvider"]
             PushMessage["PushMessage<br/>(统一解析 APNs / 厂商负载)"]
             APNs["APNsPushProvider<br/>(handleDeviceToken / handleRemoteNotification)"]
@@ -52,11 +82,11 @@ flowchart TB
     end
     
     UNCenter["iOS 系统通知中心<br/>(UNUserNotificationCenter)"]
-    APNsServer["Apple Push Notification service<br/>(APNs 云端)"]
+    APNsServer["Apple Push Notification service<br/>(APNs 远程服务)"]
 
     %% 交互链路
-    App -->|1. 初始化与配置| Facade
-    App -->|2. 构建发送本地通知| DSL
+    App -->|1. 初始化与前台配置| Facade
+    App -->|2. 构建并发送本地通知| DSL
     
     Facade --> CategoryMgr
     Facade --> PermHelper
@@ -72,53 +102,34 @@ flowchart TB
     CategoryConfig -->|注册分类与按钮| UNCenter
     
     APNs -.->|实现| PushProviderInterface
-    APNsServer -->|4. 推送下发| APNs
+    APNsServer -->|4. 下发远程推送| APNs
     APNs --> PushMessage
 ```
 
 ---
 
-## 🛠️ 项目结构
+## 🚀 第三方快速接入指南
 
-```
-PushKit (iOS Branch)
-├── Package.swift                             # SPM 依赖与模块定义
-├── Sources/PushKit/
-│   ├── PushKitManager.swift                  # 核心门面单例类
-│   ├── Permission/
-│   │   └── NotificationPermissionHelper.swift # async/await 权限请求与设置跳转
-│   ├── Category/
-│   │   └── NotificationCategoryConfig.swift   # 通知分类与交互按钮管理器
-│   ├── Builder/
-│   │   ├── PushNotificationBuilder.swift     # 链式构建器与触发器封装
-│   │   └── NotificationDSL.swift             # 闭包 DSL 快捷语法
-│   ├── Delegate/
-│   │   └── PushKitNotificationCenterDelegate.swift # 前台展示与交互回调 Delegate
-│   └── Provider/
-│       ├── PushMessage.swift                 # 统一推送消息数据模型
-│       ├── PushProvider.swift                # 厂商推送通道协议
-│       └── APNsPushProvider.swift            # APNs 原生推送通道实现
-└── Tests/PushKitTests/
-    └── PushKitTests.swift                    # 单元测试套件
-```
+### 1. 依赖配置 (Swift Package Manager)
 
----
+#### 方式 A：Xcode 图形化添加
+1. 在 Xcode 中打开你的主项目，选择菜单 **File > Add Package Dependencies...**
+2. 在搜索框中输入仓库地址：
+   ```
+   https://github.com/e-hai/PushKit-iOS.git
+   ```
+3. Dependency Rule 选择 **Exact Version** 并输入 `1.0.0`（或选择 Up to Next Major）。
 
-## 🚀 快速上手
-
-### 1. 依赖配置 (SPM)
-
-在 Xcode 项目中选择 **File > Add Package Dependencies...**，输入仓库地址并选定 `ios` 分支或对应发布 Tag：
-
+#### 方式 B：在 `Package.swift` 中引入
 ```swift
 dependencies: [
-    .package(url: "https://github.com/e-hai/PushKit.git", branch: "ios")
+    .package(url: "https://github.com/e-hai/PushKit-iOS.git", exact: "1.0.0")
 ]
 ```
 
 ---
 
-### 2. 初始化与前台通知设置
+### 2. 初始化与前台通知横幅展示
 
 在 `AppDelegate` 或 `@main App` 的 `init()` 中进行设置：
 
@@ -130,17 +141,17 @@ import PushKit
 class AppDelegate: UIResponder, UIApplicationDelegate {
     func application(
         _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?
+        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
     ) -> Bool {
-        // 绑定系统通知中心 Delegate
+        // 1. 初始化 PushKit，绑定 UNUserNotificationCenterDelegate
         PushKitManager.shared.setup()
         
-        // 自定义前台通知横幅展示（可选）
+        // 2. 自定义前台通知横幅展示选项（默认支持 banner, list, sound, badge）
         PushKitManager.shared.delegate.willPresentNotificationHandler = { notification in
-            return [.banner, .sound, .badge]
+            return [.banner, .sound, .badge, .list]
         }
         
-        // 监听用户点击通知行为（可选）
+        // 3. 监听用户点击通知行为（可选）
         PushKitManager.shared.delegate.didReceiveNotificationResponseHandler = { response in
             let userInfo = response.notification.request.content.userInfo
             print("用户点击了通知：\(userInfo)")
@@ -153,7 +164,7 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
 ---
 
-### 3. 请求通知权限
+### 3. 请求系统通知权限
 
 ```swift
 // 异步请求通知权限
@@ -162,11 +173,11 @@ Task {
         let granted = try await PushKitManager.shared.requestPermission(options: [.alert, .badge, .sound])
         print("通知授权状态：\(granted)")
     } catch {
-        print("权限请求失败：\(error)")
+        print("权限申请失败：\(error)")
     }
 }
 
-// 跳转系统设置
+// 引导用户跳转到系统设置中的本应用通知设置页
 PushKitManager.shared.openNotificationSettings()
 ```
 
@@ -174,37 +185,37 @@ PushKitManager.shared.openNotificationSettings()
 
 ### 4. 发送通知 (使用 Swift DSL)
 
-#### 发送普通通知
+#### 发送普通即时通知
 ```swift
 Task {
     try? await PushKitManager.shared.notify(id: "msg_1001") { builder in
-        builder.title = "新消息提醒"
-        builder.subtitle = "系统公告"
-        builder.body = "您收到一条来自 PushKit (iOS) 的通知消息。"
+        builder.title = "新订单通知"
+        builder.subtitle = "外卖配送中"
+        builder.body = "骑手已接单，预计 20 分钟内送达。"
         builder.badge = 1
-        builder.userInfo = ["type": "chat", "chat_id": 12345]
+        builder.userInfo = ["order_id": "123456"]
     }
 }
 ```
 
-#### 发送倒计时通知 (带触发器)
+#### 发送倒计时定时通知 (`timeInterval`)
 ```swift
 Task {
     try? await PushKitManager.shared.notify(id: "reminder_1002") { builder in
-        builder.title = "倒计时提醒"
-        builder.body = "5 秒钟前设置的提醒已到达！"
+        builder.title = "⏰ 定时提醒"
+        builder.body = "5 秒倒计时结束，提醒事项到达！"
         builder.triggerType = .timeInterval(seconds: 5, repeats: false)
     }
 }
 ```
 
-#### 发送富媒体图片通知
+#### 发送富媒体图片通知 (`Attachment`)
 ```swift
 if let imageURL = Bundle.main.url(forResource: "banner", withExtension: "jpg") {
     Task {
         try? await PushKitManager.shared.notify(id: "image_1003") { builder in
             builder.title = "图文并茂的通知"
-            builder.body = "长按或下拉通知栏展开查看图片。"
+            builder.body = "长按或下拉通知栏可直接展开查看图片。"
             builder.addAttachment(fileURL: imageURL)
         }
     }
@@ -213,25 +224,36 @@ if let imageURL = Bundle.main.url(forResource: "banner", withExtension: "jpg") {
 
 ---
 
-### 5. 注册 APNs 与接收远程推送
+### 5. 接入官方 APNs 远程推送
 
 ```swift
-// 1. 在 AppDelegate 中接收 DeviceToken 并转发给 PushKit
+// 1. 在 AppDelegate 中接收系统返回的二进制 DeviceToken 并转发给 PushKit
 func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
     PushKitManager.shared.apnsProvider.handleDeviceToken(deviceToken)
 }
 
-// 2. 接收 APNs 远程推送消息
+// 2. 接收 APNs 远程推送并自动解析为统一数据结构 PushMessage
 PushKitManager.shared.apnsProvider.setMessageListener { message, providerName in
     print("收到来自 [\(providerName)] 的远程推送：title=\(message.title ?? ""), body=\(message.body ?? "")")
-    print("自定义负载：\(message.payload)")
+    print("自定义业务负载：\(message.payload)")
 }
 
-// 3. 注册 APNs
+// 3. 向 APNs 服务器注册请求设备 Token
 PushKitManager.shared.apnsProvider.register { token, provider in
-    print("成功获取 \(provider) DeviceToken: \(token)")
+    print("成功获取 APNs DeviceToken: \(token)")
+    // 上报 token 给你的业务后台
 }
 ```
+
+---
+
+## 📱 运行 Demo 示例工程
+
+仓库内附带完整的 **SwiftUI 交互式 Demo App**：
+
+1. 双击打开 `Example/PushKitDemo.xcodeproj`。
+2. 在 Xcode 顶部选择任一 **iPhone 模拟器**（如 iPhone 16 / 15）。
+3. 按下快捷键 `Cmd + R` 启动体验即可！
 
 ---
 
@@ -241,7 +263,7 @@ PushKitManager.shared.apnsProvider.register { token, provider in
 # 编译库模块
 swift build
 
-# 运行单元测试
+# 运行完整单元测试
 swift test
 ```
 

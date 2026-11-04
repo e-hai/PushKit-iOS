@@ -7,7 +7,7 @@ let package = Package(
     name: "PushKit",
     defaultLocalization: "zh-Hans",
     platforms: [
-        .iOS(.v14),
+        .iOS(.v15),
         .macOS(.v11)
     ],
     products: [
