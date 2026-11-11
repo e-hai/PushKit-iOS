@@ -118,12 +118,12 @@ flowchart TB
    ```
    https://github.com/e-hai/PushKit-iOS.git
    ```
-3. Dependency Rule 选择 **Exact Version** 并输入 `1.0.0`（或选择 Up to Next Major）。
+3. Dependency Rule 选择 **Exact Version** 并输入 `1.0.1`（或选择 Up to Next Major）。
 
 #### 方式 B：在 `Package.swift` 中引入
 ```swift
 dependencies: [
-    .package(url: "https://github.com/e-hai/PushKit-iOS.git", exact: "1.0.0")
+    .package(url: "https://github.com/e-hai/PushKit-iOS.git", exact: "1.0.1")
 ]
 ```
 

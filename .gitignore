@@ -8,3 +8,4 @@ DerivedData/
 *.xcworkspace
 !PushKit.xcodeproj
 !PushKit.xcworkspace
+!Example/PushKitDemo.xcodeproj
